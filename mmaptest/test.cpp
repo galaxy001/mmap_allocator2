@@ -5,7 +5,7 @@
 #include "mmap_allocator.hpp"
 
 int main() {
-    std::vector<int, __gnu_cxx::mmap_allocator<int>> vec(16);
+    std::vector<int, galaxy::mmap_allocator<int>> vec(16);
     //std::vector<int> vec;
     for (size_t i = 0; i < vec.size(); i++)
         vec[i] = static_cast<int>(i);

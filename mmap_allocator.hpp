@@ -10,7 +10,7 @@
 
 #include "mmap_malloc.h"
 
-namespace __gnu_cxx {
+namespace galaxy {
 template <typename _Tp>
 class mmap_allocator {
    public:
