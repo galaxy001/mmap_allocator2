@@ -11,6 +11,7 @@
 #include "mmap_malloc.h"
 
 namespace galaxy {
+
 template <typename _Tp>
 class mmap_allocator {
    public:
@@ -65,6 +66,6 @@ class mmap_allocator {
 	}
 };
 
-}  // namespace __gnu_cxx
+}  // namespace galaxy
 
 #endif
