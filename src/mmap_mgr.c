@@ -10,7 +10,7 @@
 #include "constants.h"
 #include "mmap_mgr.h"
 #include "profiling.h"
-#include "std_binding.h"
+#include <stdlib.h>
 
 /*
 This function will reserve a region for later mmap use.
@@ -25,14 +25,14 @@ void* mmap_reserve(const size_t size) {
 }
 
 int mmap_maptemp(void* addr, const size_t size, char* template) {
-  char* filename = (char*) std_malloc(strlen(template) + 1);
+  char* filename = (char*) malloc(strlen(template) + 1);
   if (!filename) {
     return -1;
   }
   strcpy(filename, template);
   int fd = mkstemp(filename);
   if (fd < 0) {
-    FREE(filename);
+    free(filename);
     return -2;
   }
 
@@ -40,7 +40,7 @@ int mmap_maptemp(void* addr, const size_t size, char* template) {
   // however, since we have the fd, it can still be written.
   int retval;
   retval = unlink(filename);
-  FREE(filename);
+  free(filename);
   if (retval) {
     return -3;
   }

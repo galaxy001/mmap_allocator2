@@ -1,4 +1,4 @@
-CC = gcc
+CC ?= gcc
 CFLAGS = -O3
 OFLAGS = -Wall -fPIC 
 LDFLAGS = -shared
@@ -28,10 +28,16 @@ OBJ_FILES = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(LIB_SRCS))
 # Define the ISO output file
 ISO_FILE = mmap_allocator.so
 
+all: $(LIB_DIR)/lib$(LIB_NAME).so $(LIB_DIR)/lib$(LIB_NAME).a
+
 # Build the library
 $(LIB_DIR)/lib$(LIB_NAME).so: $(OBJ_FILES)
 	mkdir -p $(LIB_DIR)
 	$(CC) $(LDFLAGS) -o $@ $^
+
+$(LIB_DIR)/lib$(LIB_NAME).a: $(OBJ_FILES)
+	mkdir -p $(LIB_DIR)
+	ar r $@ $^
 
 # Build the object files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(LIB_HDRS)
@@ -47,7 +53,6 @@ dump_commands:
 
 # Build the ISO
 .PHONY: iso
-all: $(LIB_DIR)/lib$(LIB_NAME).so
 
 # Clean the built directory
 .PHONY: clean

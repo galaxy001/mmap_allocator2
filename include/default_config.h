@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 
-#define MAX_NAMING_TEMPLATE_SIZE 128
+#define MAX_NAMING_TEMPLATE_SIZE 256
 
 extern char* const env_mmap_heap_size;
 extern char* const env_mmap_alloctor_min_bsize;

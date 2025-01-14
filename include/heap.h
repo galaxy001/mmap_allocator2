@@ -6,7 +6,6 @@
 
 #include "constants.h"
 #include "list.h"
-#include "std_binding.h"
 
 #define INIT_HEAP_CAPACITY 8
 

@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 #include "constants.h"
-#include "std_binding.h"
+#include <stdlib.h>
 
 typedef struct list_node_base {
   struct list_node_base* prev;
@@ -33,7 +33,7 @@ list_create_node(
   const size_t idx,
   const bool is_free
 ) {
-  list_node_t new_node = (list_node_t) std_malloc(sizeof(list_node_base_t));
+  list_node_t new_node = (list_node_t) malloc(sizeof(list_node_base_t));
   if (!new_node) {
     return NULL;
   }
@@ -50,9 +50,9 @@ list_create_node(
 
 bool FORCE_INLINE 
 list_init(list_t* list, uint8_t* addr, const size_t size) {
-  list_node_t virtual_head = (list_node_t) std_malloc(sizeof(list_node_base_t));
-  list_node_t init_node = (list_node_t) std_malloc(sizeof(list_node_base_t));
-  list_node_t virtual_tail = (list_node_t) std_malloc(sizeof(list_node_base_t));
+  list_node_t virtual_head = (list_node_t) malloc(sizeof(list_node_base_t));
+  list_node_t init_node = (list_node_t) malloc(sizeof(list_node_base_t));
+  list_node_t virtual_tail = (list_node_t) malloc(sizeof(list_node_base_t));
   if (!virtual_head || !init_node || !virtual_tail) {
     fprintf(stderr, "Error: failed to allocate memory for the node list.\n");
     return false;

@@ -14,7 +14,7 @@
 #include "heap.h"
 #include "list.h"
 #include "mmap_mgr.h"
-#include "std_binding.h"
+#include <stdlib.h>
 #include "profiling.h"
 
 /*---------------------------------------------------------------------------*/
@@ -32,14 +32,6 @@ enum allocator_status {
   LOADED = 1
 };
 static enum allocator_status allocator_status = NOT_LOADED;
-
-/*---------------------------------------------------------------------------*/
-// References binding to the original stdlib functions.
-void* (*std_malloc)(size_t) = NULL;
-void *(*std_calloc)(size_t, size_t) = NULL;
-void *(*std_free)(size_t) = NULL;
-void *(*std_realloc)(void *, size_t) = NULL;
-void *(*std_reallocarray)(void *, size_t, size_t) = NULL;
 
 /*---------------------------------------------------------------------------*/
 // Global lock.
@@ -166,26 +158,6 @@ config_parameters() {
 LOCAL_HELPER void mmap_allocator_init() {
   GLOBAL_LOCK_ACQUIRE();
   if (allocator_status != NOT_LOADED) {
-    GLOBAL_LOCK_RELEASE();
-    return;
-  }
-
-  // Getting the address of the default allocator APIs.
-  std_malloc = dlsym(RTLD_NEXT, "malloc");
-  std_free = dlsym(RTLD_NEXT, "free");
-  std_calloc = dlsym(RTLD_NEXT, "calloc");
-  std_realloc = dlsym(RTLD_NEXT, "realloc");
-  std_reallocarray = dlsym(RTLD_NEXT, "reallocarray");
-
-  if (
-    !std_malloc ||
-    !std_free ||
-    !std_calloc ||
-    !std_realloc ||
-    !std_reallocarray
-  ) {
-    fprintf(stderr, "Failed to link to stdlib: %s\n", dlerror());
-    allocator_status = FAILED_TO_LOAD;
     GLOBAL_LOCK_RELEASE();
     return;
   }
@@ -329,20 +301,20 @@ LOCAL_HELPER bool mmap_release_with_copy(
 
 /*---------------------------------------------------------------------------*/
 // User library interface
-void* malloc(size_t size);
-void* calloc(size_t num_elements, size_t element_size);
-void* reallocarray(void *addr, size_t size, size_t count);
-void* realloc(void *addr, size_t size);
+void* mmap_malloc(size_t size);
+void* mmap_calloc(size_t num_elements, size_t element_size);
+void* mmap_reallocarray(void *addr, size_t size, size_t count);
+void* mmap_realloc(void *addr, size_t size);
 
 /*---------------------------------------------------------------------------*/
 // malloc implementation
-void* malloc(size_t size) {
-  if (allocator_status == NOT_LOADED && !std_malloc) {
+void* mmap_malloc(size_t size) {
+  if (allocator_status == NOT_LOADED) {
     mmap_allocator_init();
   }
 
   if (allocator_status != LOADED || size < mmap_alloctor_min_bsize) {
-    return std_malloc(size);
+    return malloc(size);
   }
 
   void* ret = mmap_allocate(size);
@@ -355,14 +327,14 @@ void* malloc(size_t size) {
 
 /*---------------------------------------------------------------------------*/
 // calloc implementation
-void* calloc(size_t num_elements, size_t element_size) {
-  if (allocator_status == NOT_LOADED && !std_calloc) {
+void* mmap_calloc(size_t num_elements, size_t element_size) {
+  if (allocator_status == NOT_LOADED) {
     mmap_allocator_init();
   }
 
   const size_t total_size = num_elements * element_size;
   if (allocator_status != LOADED || total_size < mmap_alloctor_min_bsize) {
-    return std_calloc(num_elements, element_size);
+    return calloc(num_elements, element_size);
   }
 
   void* ret = mmap_allocate(total_size);
@@ -376,21 +348,21 @@ void* calloc(size_t num_elements, size_t element_size) {
 
 /*---------------------------------------------------------------------------*/
 // reallocarray implementation
-void* reallocarray(void *addr, size_t size, size_t count) {
-  return realloc(addr, size * count);
+void* mmap_reallocarray(void *addr, size_t size, size_t count) {
+  return mmap_realloc(addr, size * count);
 }
 
 /*---------------------------------------------------------------------------*/
 // realloc implementation
-void* realloc(void *addr, size_t size) {
-  if (!addr) return malloc(size); // It should behave like malloc.
+void* mmap_realloc(void *addr, size_t size) {
+  if (!addr) return mmap_malloc(size); // It should behave like malloc.
 
-  if (allocator_status == NOT_LOADED && !std_realloc) {
+  if (allocator_status == NOT_LOADED) {
     mmap_allocator_init();
   }
 
   if (allocator_status != LOADED) {
-    return std_realloc(addr, size);
+    return realloc(addr, size);
   }
 
   // mmap allocator is properly initialized.
@@ -425,7 +397,7 @@ void* realloc(void *addr, size_t size) {
   }
 
   // The old address is allcoated by the std heap. We don't know the size.
-  void* realloc_buffer = std_realloc(addr, size);
+  void* realloc_buffer = realloc(addr, size);
   if (!realloc_buffer) {
     fprintf(stderr, "Failed to reallocate a buffer using std realloc.\n");
     return NULL;
@@ -439,12 +411,12 @@ void* realloc(void *addr, size_t size) {
   void* new_region = mmap_allocate(size);
   if (!new_region) {
     OUT_OF_MEMORY();
-    FREE(realloc_buffer);
+    free(realloc_buffer);
     return NULL;
   }
 
   memcpy(new_region, realloc_buffer, size);
-  FREE(realloc_buffer);
+  free(realloc_buffer);
 
   HEAP_CHECK();
   return new_region;
@@ -452,15 +424,15 @@ void* realloc(void *addr, size_t size) {
 
 /*---------------------------------------------------------------------------*/
 // free implementation
-void free(void* addr) {
+void mmap_free(void* addr) {
   if (!addr) return;
 
-  if (allocator_status == NOT_LOADED && !std_free) {
+  if (allocator_status == NOT_LOADED) {
     mmap_allocator_init();
   }
 
   if (allocator_status != LOADED || addr < mmap_region_base) {
-    FREE(addr);
+    free(addr);
     return;
   }
 

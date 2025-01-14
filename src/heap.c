@@ -3,7 +3,7 @@
 
 #include "heap.h"
 #include "list.h"
-#include "std_binding.h"
+#include <stdlib.h>
 
 /*
 Since these functions are recursive, they cannot be inlined. 
@@ -71,7 +71,7 @@ bool LOCAL_HELPER
 heap_insert(heap_t* heap, list_node_t node) {
   if (heap->size == heap->capacity) {
     // Needs to expand.
-    list_node_t* new_array = std_realloc(
+    list_node_t* new_array = realloc(
       heap->node_array, 
       sizeof(list_node_base_t) * heap->capacity * 2
     );
@@ -202,7 +202,7 @@ bool heap_free(heap_t* heap, list_node_t node) {
       assert(heap->node_array[previous->idx] == previous);
       heap_remove_idx(heap, previous->idx);
       node_unlink(previous); 
-      FREE(previous);
+      free(previous);
     }
     
     // Merge the current into next.
@@ -210,7 +210,7 @@ bool heap_free(heap_t* heap, list_node_t node) {
     next->size += node->size;
     next->addr = node->addr;
     node_unlink(node);
-    FREE(node);
+    free(node);
     // Restructure the heap as we increase the size of "next" node.
     heap_heapify_up(heap, next->idx);
     return true;
@@ -220,7 +220,7 @@ bool heap_free(heap_t* heap, list_node_t node) {
     list_node_t previous = node->prev;
     previous->size += node->size;
     node_unlink(node);
-    FREE(node);
+    free(node);
 
     // Restructure the heap as we increase the size of "next" node.
     heap_heapify_up(heap, previous->idx);
@@ -235,7 +235,7 @@ bool heap_free(heap_t* heap, list_node_t node) {
 
 bool heap_init(heap_t* heap, uint8_t* addr, const size_t size) {
   list_node_t* array = 
-    (list_node_t*) std_malloc(sizeof(list_node_t) * INIT_HEAP_CAPACITY);
+    (list_node_t*) malloc(sizeof(list_node_t) * INIT_HEAP_CAPACITY);
   if (!array) {
     fprintf(stderr, "Error: failed to allocate memory for the heap.\n");
     return false;
@@ -250,7 +250,7 @@ bool heap_init(heap_t* heap, uint8_t* addr, const size_t size) {
   };
 
   if (!list_init(&(heap->node_list), addr, size)) {
-    FREE(array);
+    free(array);
     return false;
   }
 
