@@ -47,14 +47,18 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(LIB_HDRS)
 print-%:
 	@echo $*=$($*)
 
-.PHONY: dump_commands
 dump_commands:
 	@$(MAKE) -np --print-directory | grep -E 'gcc|\b$(CC)\b' > compile_commands.json
 
 # Build the ISO
 .PHONY: iso
 
+test: $(LIB_DIR)/lib$(LIB_NAME).a
+	mkdir -p $(BIN_DIR)
+	$(CC) $(CFLAGS) $(OFLAGS) -pthread -fopenmp -fopenmp-simd -I. mmaptest/c_test.c $^ -o $(BIN_DIR)/c_test
+	ls -l $(BIN_DIR)
+
 # Clean the built directory
-.PHONY: clean
+.PHONY: clean dump_commands all test
 clean:
 	rm -rf $(OBJ_DIR) $(LIB_DIR) $(BIN_DIR)
