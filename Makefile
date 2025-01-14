@@ -1,6 +1,7 @@
 CC ?= gcc
 CXX ?= g++
 CFLAGS = -O3
+CXXFLAGS = -std=gnu++20
 OFLAGS = -Wall -fPIC -pthread
 LDFLAGS = -shared
 
@@ -57,12 +58,15 @@ dump_commands:
 test: $(LIB_DIR)/lib$(LIB_NAME).a
 	mkdir -p $(BIN_DIR)
 	$(CC) $(CFLAGS) $(OFLAGS) -pthread -fopenmp -fopenmp-simd -I. mmaptest/c_test.c $^ -o $(BIN_DIR)/c_test
-	$(CXX) $(CFLAGS) $(OFLAGS) -pthread -I. mmaptest/test.cpp $^ -o $(BIN_DIR)/cpp_test
+	$(CXX) $(CFLAGS) $(CXXFLAGS) $(OFLAGS) -pthread -I. mmaptest/test.cpp $^ -o $(BIN_DIR)/cpp_test
 	ls -l $(BIN_DIR)
 
 run: $(BIN_DIR)/cpp_test
 	ENV_PROFILE_FILE_PATH=stats.txt ENV_PROFILE_FREQUENCY=1 $(BIN_DIR)/cpp_test
 	cat stats.txt
+
+fmt:
+	clang-format -i *.hpp
 
 # Clean the built directory
 .PHONY: clean dump_commands all test
