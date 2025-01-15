@@ -51,6 +51,7 @@ static pthread_mutex_t glock = PTHREAD_MUTEX_INITIALIZER;
 // Fixed
 static size_t page_size = 0;
 static void* mmap_region_base = NULL;
+static void* mmap_region_end = NULL;
 
 // Configurable
 static size_t mmap_heap_size = 0;
@@ -193,6 +194,7 @@ LOCAL_HELPER void mmap_allocator_init() {
     GLOBAL_LOCK_RELEASE();
     return;
   }
+  mmap_region_end = mmap_region_base + mmap_heap_size - 1;
 
   // Initialize mmap heap.
   if (!heap_init(&mmap_heap, mmap_region_base, mmap_heap_size)) {
@@ -431,7 +433,8 @@ void mmap_free(void* addr) {
     mmap_allocator_init();
   }
 
-  if (allocator_status != LOADED || addr < mmap_region_base) {
+  if (allocator_status != LOADED || addr < mmap_region_base || addr > mmap_region_end) {
+  /* On macOS, `addr` can be larger than `mmap_region_end` */
     free(addr);
     return;
   }
