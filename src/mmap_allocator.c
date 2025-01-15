@@ -363,7 +363,7 @@ void* mmap_realloc(void *addr, size_t size) {
     mmap_allocator_init();
   }
 
-  if (allocator_status != LOADED) {
+  if (allocator_status != LOADED || addr < mmap_region_base || addr > mmap_region_end) {
     return realloc(addr, size);
   }
 
