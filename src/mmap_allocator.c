@@ -383,7 +383,7 @@ void* mmap_realloc(void *addr, size_t size) {
       return realloc(addr, size);
     } else {
       size_t old_size = MALLOCSIZE(addr);
-	  fprintf(stderr, "Realloc Heap[%zu] to Mmap[%zu].\n",old_size,size);
+      fprintf(stderr, "Realloc Heap[%zu] to Mmap[%zu].\n",old_size,size);
       if (old_size > size) old_size = size;
       void* new_region = mmap_allocate(size);
       if (!new_region) {
@@ -411,6 +411,7 @@ void* mmap_realloc(void *addr, size_t size) {
     
     if (block->size >= size) return addr; // Already large enough.
     
+    fprintf(stderr, "Realloc Mmap[%zu] to Mmap[%zu].\n",block->size,size);
     // const size_t alloc_size = CEILING_PAGE_SIZE(size);
     void* new_region = mmap_allocate(size);
     if (!new_region) {
