@@ -17,6 +17,21 @@
 #include <stdlib.h>
 #include "profiling.h"
 
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#if TARGET_OS_OSX
+#include <malloc/malloc.h>
+#define MALLOCSIZE malloc_size
+#else
+#error "Unsupported Apple platform"
+#endif
+#elif __linux__
+#include <malloc.h>
+#define MALLOCSIZE malloc_usable_size
+#else
+#error "Unsupported compiler"
+#endif
+
 /*---------------------------------------------------------------------------*/
 // Out of memory.
 #define OUT_OF_MEMORY() do { \
@@ -364,11 +379,26 @@ void* mmap_realloc(void *addr, size_t size) {
   }
 
   if (allocator_status != LOADED || addr < mmap_region_base || addr > mmap_region_end) {
-    return realloc(addr, size);
+    if (size < mmap_alloctor_min_bsize) {
+      return realloc(addr, size);
+    } else {
+      size_t old_size = MALLOCSIZE(addr);
+	  fprintf(stderr, "Realloc Heap[%zu] to Mmap[%zu].\n",old_size,size);
+      if (old_size > size) old_size = size;
+      void* new_region = mmap_allocate(size);
+      if (!new_region) {
+        OUT_OF_MEMORY();
+        return NULL;
+      }
+      memcpy(new_region, addr, old_size);
+      free(addr);
+      HEAP_CHECK();
+      return new_region;
+    }
   }
 
   // mmap allocator is properly initialized.
-  if (addr >= mmap_region_base) {
+  if (addr >= mmap_region_base && addr <= mmap_region_end) {
 
     GLOBAL_LOCK_ACQUIRE();
     list_node_t block = list_find_in_use(&mmap_heap.node_list, addr);
@@ -397,31 +427,8 @@ void* mmap_realloc(void *addr, size_t size) {
     HEAP_CHECK();
     return new_region;
   }
-
-  // The old address is allcoated by the std heap. We don't know the size.
-  void* realloc_buffer = realloc(addr, size);
-  if (!realloc_buffer) {
-    fprintf(stderr, "Failed to reallocate a buffer using std realloc.\n");
-    return NULL;
-  }
-
-  if (size < mmap_alloctor_min_bsize) {
-    return realloc_buffer;
-  }
-
-  // const size_t alloc_size = CEILING_PAGE_SIZE(size);
-  void* new_region = mmap_allocate(size);
-  if (!new_region) {
-    OUT_OF_MEMORY();
-    free(realloc_buffer);
-    return NULL;
-  }
-
-  memcpy(new_region, realloc_buffer, size);
-  free(realloc_buffer);
-
-  HEAP_CHECK();
-  return new_region;
+  fprintf(stderr, "Failed in mmap_relloc.\n");
+  return NULL;
 }
 
 /*---------------------------------------------------------------------------*/
